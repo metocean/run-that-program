@@ -1,9 +1,9 @@
 # docker-init
 A INIT / PID 1 program that starts your app written in C that does:
-- starts on PID1 and passes signals to the main program.
-- can remaps signals passed to the main program.
+- that passes signals handed to PID 1 to the main program.
+- allows remapping of signals passed to the main program.
 - reaps zombie processes.
-- allows for an init cmd to be run before the main program.
+- allows for an initial program to be run before the main program.
 
 - [docker-init](#docker-consul-init)
   * [usage](#usage)
