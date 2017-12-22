@@ -1,4 +1,4 @@
-# run-that
+# run-that --program
 A INIT / PID 1 program that starts your app written in C that does:
 - that passes signals handed to PID 1 to the main program.
 - allows remapping of signals passed to the main program.
