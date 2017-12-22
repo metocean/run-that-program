@@ -23,7 +23,7 @@ usage: docker-init --map [from-sig] [to-sig] --init [program / args ..] --progra
 
   --program [norm program args]: this is the program + it args to be run in the docker
 
-  --on-start [init program args]: the init program runs first, before consul and --program. If it returns nonzero consul-init will exit.
+  --on-start [init program args]: the init program runs first, before consul and --program.
 
   --after-exit [exit program args]: the exit program runs after the main program as stop.
 
@@ -40,21 +40,20 @@ examples:
 ## example
 this will start nginx and the consul agent. When ```docker stop``` is used nginx will gractefully shutdown and consul will deregister the service.
 ```
-/bin/consul-init --map TERM QUIT --program /bin/nginx -g daemon off;
+/bin/docker-init --map TERM QUIT --program /bin/nginx -g daemon off;
 ```
 ```--map``` maps the terminate signal to quit allowing nginx to gracefully shut down.
 ```
-/bin/consul-init --map TERM QUIT --init wget http://[somesite]/config.json --program /bin/nginx -g daemon off;
+/bin/docker-init --map TERM QUIT --on-start wget http://[somesite]/config.json --program /bin/nginx -g daemon off;
 ```
-```--init``` will run wget before the nginx or consul-agent. If wget exits none zero consul-init will exit without running consul agent or the program nginx.
+```--on-start``` will run wget before the main program nginx.
 
 ## on docker stop
-on docker stop / SIGTERM or on SIGINT consul-init will:
-1. stop the consul agent greacefully allowing it to redregister itself.
-2. send a SIGTERM to the program, or if the user has mapped TERM to another signal it will send the mapped [to-signal].
+on docker stop / SIGTERM or on SIGINT docker-init will:
+1. send a SIGTERM to the program, or if the user has mapped TERM to another signal it will send the mapped [to-signal].
 
 ## on docker kill SIGNAL
-on docker kill -s SIGNAL consul-init will send the SIGNAL to the program, or if the user has mapped SIGNAL to another signal it will send the mapped [to-signal].
+on docker kill -s SIGNAL docker-init will send the SIGNAL to the program, or if the user has mapped SIGNAL to another signal it will send the mapped [to-signal].
 
 ## docker signals
 * ```docker stop```: The main process inside the container will receive SIGTERM, and after a grace period (default 10 seconds), SIGKILL.
