@@ -21,18 +21,18 @@ void print_help_and_exit(int exit_code) {
 usage: docker-init --map [from-sig] [to-sig] --init [program / args ..] --program [program / args ..]\n\n \
   --map [from-sig] [to-sig]: this re-maps a signal received by docker-init app to the program, you can have more than one mapping\n\n \
   --program [norm program args]: this is the program + it args to be run in the docker\n\n \
-  --init [init program args]: the init program runs first, before consul and --program. If it returns nonzero consul-init will exit. \n\n \
-  --exit [exit program args]: the exit program runs after the main program as stop. \n\n \
+  --on-start [init program args]: the init program runs first, before consul and --program. If it returns nonzero consul-init will exit. \n\n \
+  --after-exit [exit program args]: the exit program runs after the main program as stop. \n\n \
 examples: \n\n \
-  docker-init --init echo hello --program sleep 2 --exit echo good bye \n\n \
+  docker-init --on-start echo hello --program sleep 2 --after-exit echo goodbye \n\n \
   docker-init --map TERM QUIT --program /bin/nginx -g daemon off;\n\n \
-  docker-init --map TERM QUIT --init wget http://[somesite]/config.json --program /bin/nginx -g daemon off;\n\n");
+  docker-init --map TERM QUIT --on-start wget http://[somesite]/config.json --program /bin/nginx -g daemon off;\n\n");
     exit(exit_code);
 }
 
 #define MAX_ARGS 50
 static struct {
-    char *init_cmd[MAX_ARGS + 1];
+    char *start_cmd[MAX_ARGS + 1];
     char *program_cmd[MAX_ARGS + 1];
     char *exit_cmd[MAX_ARGS + 1];
     int signal_map[MAX_SIG_NAMES][2];
@@ -49,12 +49,16 @@ int map_signal(int signum) {
 
 void parse_args(int argc, char** argv) {
 
+    if (argc == 1) {
+      print_help_and_exit(1);
+    }
+    
     enum {
         INIT_ARGS,
         GET_MAP_ARG_1,
         GET_MAP_ARG_2,
-        GET_INIT_ARG,
-        GET_INIT_ARG_COUNT,
+        GET_START_ARG,
+        GET_START_ARG_COUNT,
         GET_PROGRAM_ARG,
         GET_PROGRAM_ARG_COUNT,
         GET_EXIT_ARG,
@@ -65,8 +69,8 @@ void parse_args(int argc, char** argv) {
 
     int sig_num = -1;
 
-    char **init_cmd = NULL;
-    int init_cmd_n = 0;
+    char **start_cmd = NULL;
+    int start_cmd_n = 0;
 
     char **program_cmd = NULL;
     int program_cmd_n = 0;
@@ -80,13 +84,13 @@ void parse_args(int argc, char** argv) {
                 || strcasecmp(argv[i], "-h") == 0) {
             print_help_and_exit(0);
         }
-        else if (strcasecmp(argv[i], "--init") == 0) {
-            state = GET_INIT_ARG;
+        else if (strcasecmp(argv[i], "--on-start") == 0) {
+            state = GET_START_ARG;
         }
         else if (strcasecmp(argv[i], "--program") == 0) {
             state = GET_PROGRAM_ARG;
         }
-        else if (strcasecmp(argv[i], "--exit") == 0) {
+        else if (strcasecmp(argv[i], "--after-exit") == 0) {
             state = GET_EXIT_ARG;
         }
         else if (state == INIT_ARGS) {
@@ -124,13 +128,13 @@ void parse_args(int argc, char** argv) {
             _args.signal_map[_args.signal_map_len++][1] = sig_num;
             state = INIT_ARGS;
 
-        } else if (state == GET_INIT_ARG) {
-            init_cmd = &argv[i];
-            init_cmd_n++;
-            state = GET_INIT_ARG_COUNT;
+        } else if (state == GET_START_ARG) {
+            start_cmd = &argv[i];
+            start_cmd_n++;
+            state = GET_START_ARG_COUNT;
 
-        } else if (state == GET_INIT_ARG_COUNT) {
-            init_cmd_n++;
+        } else if (state == GET_START_ARG_COUNT) {
+            start_cmd_n++;
 
         } else if (state == GET_PROGRAM_ARG) {
             program_cmd = &argv[i];
@@ -150,9 +154,9 @@ void parse_args(int argc, char** argv) {
         }
     }
 
-    if(init_cmd_n) {
-        for (i = 0; i < init_cmd_n && i < MAX_ARGS; i++)
-            _args.init_cmd[i] = init_cmd[i];
+    if(start_cmd_n) {
+        for (i = 0; i < start_cmd_n && i < MAX_ARGS; i++)
+            _args.start_cmd[i] = start_cmd[i];
     }
 
     if(program_cmd_n) {
@@ -216,9 +220,9 @@ int main(int argc, char** argv) {
 
     parse_args(argc, argv);
 
-    if (_args.init_cmd[0] && execute_cmd(_args.init_cmd) != 0) {
-        PRINT("ERROR: calling init cmd '%s' failed. Exiting.\n",
-              _args.init_cmd[0]);
+    if (_args.start_cmd[0] && execute_cmd(_args.start_cmd) != 0) {
+        PRINT("ERROR: calling --on-start cmd '%s' failed. Exiting.\n",
+              _args.start_cmd[0]);
         exit(2);
     }
 
@@ -288,7 +292,7 @@ int main(int argc, char** argv) {
     }
 
     if (_args.exit_cmd[0] && execute_cmd(_args.exit_cmd) != 0) {
-        PRINT("ERROR: calling exit cmd '%s'.\n",
+        PRINT("ERROR: calling --after-exit cmd '%s'.\n",
               _args.exit_cmd[0]);
         exit(3);
     }
