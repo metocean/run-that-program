@@ -68,7 +68,7 @@ make clean
 
 ## Dockerfile example
 ```
-# install consul-init
+# install run-that
 ENV RUN_THAT_VERSION=0.0.1
 RUN echo "----------------- install consul-init -----------------" &&\
     cd /tmp &&\
