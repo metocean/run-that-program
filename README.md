@@ -4,8 +4,9 @@ A INIT / PID 1 program that starts your app written in C that does:
 - allows remapping of signals passed to the main program.
 - reaps zombie processes.
 - allows for an initial program to be run before the main program.
+- allows for an exit program to be run after the main program has exited.
 
-- [docker-init](#docker-consul-init)
+- [docker-init](#docker-init)
   * [usage](#usage)
   * [example](#example)
   * [on docker stop / SIGTERM](#on-docker-stop)
@@ -16,18 +17,24 @@ A INIT / PID 1 program that starts your app written in C that does:
 
 ## usage
 ```
- usage: docker-init --map [from-sig] [to-sig] --init [program / args ..] --program [program / args ..]
+usage: docker-init --map [from-sig] [to-sig] --init [program / args ..] --program [program / args ..]
 
- --map [from-sig] [to-sig]: this re-maps a signal received by docker-init app to the program, you can have more than one mapping
+  --map [from-sig] [to-sig]: this re-maps a signal received by docker-init app to the program, you can have more than one mapping
 
- --program [norm program args]: this is the program + it args to be run in the docker
+  --program [norm program args]: this is the program + it args to be run in the docker
 
- --init [init program args]: the init program runs first, before consul and --program. If it returns nonzero consul-init will exit. 
+  --on-start [init program args]: the init program runs first, before consul and --program. If it returns nonzero consul-init will exit.
 
- --no-consul: do not use the consul agent
+  --after-exit [exit program args]: the exit program runs after the main program as stop.
 
- example: docker-init --map TERM QUIT --program /bin/nginx -g daemon off;
- example: docker-init --map TERM QUIT --init wget http://[somesite]/config.json --program /bin/nginx -g daemon off;
+examples:
+
+  docker-init --on-start echo hello --program sleep 2 --after-exit echo goodbye
+
+  docker-init --map TERM QUIT --program /bin/nginx -g daemon off;
+
+  docker-init --map TERM QUIT --on-start wget http://[somesite]/config.json --program /bin/nginx -g daemon off;
+
 ```
 
 ## example
