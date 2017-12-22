@@ -77,7 +77,7 @@ RUN echo "----------------- installing run-that-program -----------------" &&\
     cd /tmp/run-that-program-${RUN_THAT_VERSION}/run-that &&\
     make &&\
     cp run-that /bin/ &&\    
-    cd /tmp && rm -rf /tmp/run-that-program-${RUN_THAT_VERSION}
+    cd /tmp && rm -rf /tmp/run-that-program-${RUN_THAT_VERSION} && rm -f run-that-program.tar.gz
 
 ENTRYPOINT ["run-that", "--program", "gunicorn", "mywebapp", "--bind", "0.0.0.0:80"]
 ```
