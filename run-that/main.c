@@ -13,20 +13,20 @@
 #include "signames.h"
 
 #define PRINT(...) do { \
-    fprintf(stderr, "[docker-init] " __VA_ARGS__); \
+    fprintf(stderr, "[run-that] " __VA_ARGS__); \
 } while (0)
 
 void print_help_and_exit(int exit_code) {
     PRINT("\n\n \
-usage: docker-init --map [from-sig] [to-sig] --init [program / args ..] --program [program / args ..]\n\n \
-  --map [from-sig] [to-sig]: this re-maps a signal received by docker-init app to the program, you can have more than one mapping\n\n \
+usage: run-that --map [from-sig] [to-sig] --on-start [program / args ..] --program [program / args ..] --after-exit [program / args ..] \n\n \
+  --map [from-sig] [to-sig]: this re-maps a signal received by run-that app to the program, you can have more than one mapping\n\n \
   --program [norm program args]: this is the program + it args to be run in the docker\n\n \
-  --on-start [init program args]: the init program runs first, before consul and --program. If it returns nonzero consul-init will exit. \n\n \
-  --after-exit [exit program args]: the exit program runs after the main program as stop. \n\n \
+  --on-start [start program args]: the start program runs first, before --program. \n\n \
+  --after-exit [exit program args]: the exit program runs after the --program as exited. \n\n \
 examples: \n\n \
-  docker-init --on-start echo hello --program sleep 2 --after-exit echo goodbye \n\n \
-  docker-init --map TERM QUIT --program /bin/nginx -g daemon off;\n\n \
-  docker-init --map TERM QUIT --on-start wget http://[somesite]/config.json --program /bin/nginx -g daemon off;\n\n");
+  ./run-that --on-start echo hello --program sleep 2 --after-exit echo goodbye \n\n \
+  ./run-that --map TERM QUIT --program /bin/nginx -g daemon off;\n\n \
+  ./run-that --map TERM QUIT --on-start wget http://[somesite]/config.json --program /bin/nginx -g daemon off;\n\n");
     exit(exit_code);
 }
 
@@ -52,7 +52,7 @@ void parse_args(int argc, char** argv) {
     if (argc == 1) {
       print_help_and_exit(1);
     }
-    
+
     enum {
         INIT_ARGS,
         GET_MAP_ARG_1,
