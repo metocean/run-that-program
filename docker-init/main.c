@@ -19,12 +19,14 @@
 void print_help_and_exit(int exit_code) {
     PRINT("\n\n \
 usage: docker-init --map [from-sig] [to-sig] --init [program / args ..] --program [program / args ..]\n\n \
---map [from-sig] [to-sig]: this re-maps a signal received by docker-init app to the program, you can have more than one mapping\n\n \
---program [norm program args]: this is the program + it args to be run in the docker\n\n \
---init [init program args]: the init program runs first, before consul and --program. If it returns nonzero consul-init will exit. \n\n \
---no-consul: do not use the consul agent\n\n \
-example: docker-init --map TERM QUIT --program /bin/nginx -g daemon off;\n \
-example: docker-init --map TERM QUIT --init wget http://[somesite]/config.json --program /bin/nginx -g daemon off;");
+  --map [from-sig] [to-sig]: this re-maps a signal received by docker-init app to the program, you can have more than one mapping\n\n \
+  --program [norm program args]: this is the program + it args to be run in the docker\n\n \
+  --init [init program args]: the init program runs first, before consul and --program. If it returns nonzero consul-init will exit. \n\n \
+  --exit [exit program args]: the exit program runs after the main program as stop. \n\n \
+examples: \n\n \
+  docker-init --init echo hello --program sleep 2 --exit echo good bye \n\n \
+  docker-init --map TERM QUIT --program /bin/nginx -g daemon off;\n\n \
+  docker-init --map TERM QUIT --init wget http://[somesite]/config.json --program /bin/nginx -g daemon off;\n\n");
     exit(exit_code);
 }
 
@@ -32,6 +34,7 @@ example: docker-init --map TERM QUIT --init wget http://[somesite]/config.json -
 static struct {
     char *init_cmd[MAX_ARGS + 1];
     char *program_cmd[MAX_ARGS + 1];
+    char *exit_cmd[MAX_ARGS + 1];
     int signal_map[MAX_SIG_NAMES][2];
     int signal_map_len;
 } _args;
@@ -53,7 +56,9 @@ void parse_args(int argc, char** argv) {
         GET_INIT_ARG,
         GET_INIT_ARG_COUNT,
         GET_PROGRAM_ARG,
-        GET_PROGRAM_ARG_COUNT
+        GET_PROGRAM_ARG_COUNT,
+        GET_EXIT_ARG,
+        GET_EXIT_ARG_COUNT
     } state = INIT_ARGS;
 
     memset(&_args, 0, sizeof(_args));
@@ -66,6 +71,9 @@ void parse_args(int argc, char** argv) {
     char **program_cmd = NULL;
     int program_cmd_n = 0;
 
+    char **exit_cmd = NULL;
+    int exit_cmd_n = 0;
+
     int i = 1;
     for (; i < argc; i++) {
         if (strcasecmp(argv[i], "--help") == 0
@@ -77,6 +85,9 @@ void parse_args(int argc, char** argv) {
         }
         else if (strcasecmp(argv[i], "--program") == 0) {
             state = GET_PROGRAM_ARG;
+        }
+        else if (strcasecmp(argv[i], "--exit") == 0) {
+            state = GET_EXIT_ARG;
         }
         else if (state == INIT_ARGS) {
 
@@ -128,6 +139,14 @@ void parse_args(int argc, char** argv) {
 
         } else if (state == GET_PROGRAM_ARG_COUNT) {
             program_cmd_n++;
+
+        } else if (state == GET_EXIT_ARG) {
+            exit_cmd = &argv[i];
+            exit_cmd_n++;
+            state = GET_EXIT_ARG_COUNT;
+
+        } else if (state == GET_EXIT_ARG_COUNT) {
+            exit_cmd_n++;
         }
     }
 
@@ -139,6 +158,11 @@ void parse_args(int argc, char** argv) {
     if(program_cmd_n) {
         for (i = 0; i < program_cmd_n && i < MAX_ARGS; i++)
             _args.program_cmd[i] = program_cmd[i];
+    }
+
+    if(exit_cmd_n) {
+        for (i = 0; i < exit_cmd_n && i < MAX_ARGS; i++)
+            _args.exit_cmd[i] = exit_cmd[i];
     }
 }
 
@@ -256,12 +280,18 @@ int main(int argc, char** argv) {
     }
 
     if (program_exit_status) {
-        PRINT("dirty exit: %s status(%d)\n",
+        PRINT("dirty exit: %s status(%d) of main program \n",
                _args.program_cmd[0],
                program_exit_status);
-        return program_exit_status;
     } else {
-        PRINT("clean exit\n");
-        return 0;
+        PRINT("clean exit of main program \n");
     }
+
+    if (_args.exit_cmd[0] && execute_cmd(_args.exit_cmd) != 0) {
+        PRINT("ERROR: calling exit cmd '%s'.\n",
+              _args.exit_cmd[0]);
+        exit(3);
+    }
+
+    return program_exit_status;
 }
