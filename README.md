@@ -1,4 +1,4 @@
-# docker-init
+# run-that
 A INIT / PID 1 program that starts your app written in C that does:
 - that passes signals handed to PID 1 to the main program.
 - allows remapping of signals passed to the main program.
@@ -6,7 +6,7 @@ A INIT / PID 1 program that starts your app written in C that does:
 - allows for an initial program to be run before the main program.
 - allows for an exit program to be run after the main program has exited.
 
-- [docker-init](#docker-init)
+- [run-that](#run-that)
   * [usage](#usage)
   * [example](#example)
   * [on docker stop / SIGTERM](#on-docker-stop)
@@ -17,23 +17,23 @@ A INIT / PID 1 program that starts your app written in C that does:
 
 ## usage
 ```
-usage: docker-init --map [from-sig] [to-sig] --init [program / args ..] --program [program / args ..]
+ usage: run-that --map [from-sig] [to-sig] --on-start [program / args ..] --program [program / args ..] --after-exit [program / args ..] 
 
-  --map [from-sig] [to-sig]: this re-maps a signal received by docker-init app to the program, you can have more than one mapping
+   --map [from-sig] [to-sig]: this re-maps a signal received by run-that app to the program, you can have more than one mapping
 
-  --program [norm program args]: this is the program + it args to be run in the docker
+   --program [norm program args]: this is the program + it args to be run in the docker
 
-  --on-start [init program args]: the init program runs first, before consul and --program.
+   --on-start [start program args]: the start program runs first, before --program. 
 
-  --after-exit [exit program args]: the exit program runs after the main program as stop.
+   --after-exit [exit program args]: the exit program runs after the --program as exited. 
 
-examples:
+ examples: 
 
-  docker-init --on-start echo hello --program sleep 2 --after-exit echo goodbye
+   ./run-that --on-start echo hello --program sleep 2 --after-exit echo goodbye 
 
-  docker-init --map TERM QUIT --program /bin/nginx -g daemon off;
+   ./run-that --map TERM QUIT --program /bin/nginx -g daemon off;
 
-  docker-init --map TERM QUIT --on-start wget http://[somesite]/config.json --program /bin/nginx -g daemon off;
+   ./run-that --map TERM QUIT --on-start wget http://[somesite]/config.json --program /bin/nginx -g daemon off;
 
 ```
 
@@ -69,15 +69,15 @@ make clean
 ## Dockerfile example
 ```
 # install consul-init
-ENV DOCKER_INIT_VERSION=0.0.1
+ENV RUN_THAT_VERSION=0.0.1
 RUN echo "----------------- install consul-init -----------------" &&\
     cd /tmp &&\
-    curl -o docker-init.tar.gz -L https://github.com/metocean/docker-init/archive/v${DOCKER_INIT_VERSION}.tar.gz &&\
-    tar -vxf docker-init.tar.gz &&\
-    cd /tmp/docker-init-${DOCKER_INIT_VERSION}/docker-init &&\
+    curl -o run-that.tar.gz -L https://github.com/metocean/docker-run-that/archive/v${RUN_THAT_VERSION}.tar.gz &&\
+    tar -vxf run-that.tar.gz &&\
+    cd /tmp/run-that-${DOCKER_INIT_VERSION}/run-that &&\
     make &&\
-    cp docker-init /bin/ &&\    
-    cd /tmp && rm -rf /tmp/docker-init
+    cp run-that /bin/ &&\    
+    cd /tmp && rm -rf /tmp/run-that
 
-ENTRYPOINT ["docker-init", "--program", "gunicorn", "mywebapp", "--bind", "0.0.0.0:80"]
+ENTRYPOINT ["run-that", "--program", "gunicorn", "mywebapp", "--bind", "0.0.0.0:80"]
 ```
