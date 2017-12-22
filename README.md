@@ -69,15 +69,15 @@ make clean
 ## Dockerfile example
 ```
 # install run-that
-ENV RUN_THAT_VERSION=0.0.1
-RUN echo "----------------- install consul-init -----------------" &&\
+ENV RUN_THAT_VERSION=0.0.3
+RUN echo "----------------- installing run-that-program -----------------" &&\
     cd /tmp &&\
-    curl -o run-that.tar.gz -L https://github.com/metocean/docker-run-that/archive/v${RUN_THAT_VERSION}.tar.gz &&\
-    tar -vxf run-that.tar.gz &&\
-    cd /tmp/run-that-${DOCKER_INIT_VERSION}/run-that &&\
+    curl -o run-that-program.tar.gz -L https://github.com/metocean/run-that-program/archive/v${RUN_THAT_VERSION}.tar.gz &&\
+    tar -vxf run-that-program.tar.gz &&\
+    cd /tmp/run-that-program-${RUN_THAT_VERSION}/run-that &&\
     make &&\
     cp run-that /bin/ &&\    
-    cd /tmp && rm -rf /tmp/run-that
+    cd /tmp && rm -rf /tmp/run-that-program-${RUN_THAT_VERSION}
 
 ENTRYPOINT ["run-that", "--program", "gunicorn", "mywebapp", "--bind", "0.0.0.0:80"]
 ```
